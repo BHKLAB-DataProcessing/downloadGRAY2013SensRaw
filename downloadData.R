@@ -151,3 +151,15 @@ raw.sensitivity <- array(c(as.matrix(raw.sensitivity[ ,1:con_tested]), as.matrix
                          dimnames=list(rownames(raw.sensitivity), colnames(raw.sensitivity[ ,1:con_tested]), c("Dose", "Viability")))
 
 save(raw.sensitivity, sensitivity.info, tt, con_tested, file="/pfs/out/drug_norm_post.RData")
+
+
+raw.sensitivity.x <- parallel::splitIndices(nrow(raw.sensitivity), floor(nrow(raw.sensitivity)/1000))
+
+dir.create("/pfs/out/slices/")
+
+for(i in seq_along(raw.sensitivity.x)){
+
+  slce <- raw.sensitivity[raw.sensitivity.x[[i]],,]
+  saveRDS(slce, file=paste0("/pfs/out/slices/gray2013_raw_sens_", i, ".rds"))
+
+}
