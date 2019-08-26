@@ -139,7 +139,6 @@ rownames(raw.sensitivity) <- tt
 
 tt <- paste0("doses", con_tested)
 
-print(head(raw.sensitivity[,,"Dose"]))
 
 
 sensitivity.info <- raw.sensitivity[ , c(1,2, 3, grep(tt, colnames(raw.sensitivity)))]
