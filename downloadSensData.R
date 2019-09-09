@@ -2,75 +2,77 @@ library(downloader)
 library(PharmacoGx)
 library(openxlsx)
 
- options(stringsAsFactors=FALSE)
-    
-    badchars <- "[\xb5]|[]|[ ,]|[;]|[:]|[-]|[+]|[*]|[%]|[$]|[#]|[{]|[}]|[[]|[]]|[|]|[\\^]|[/]|[\\]|[.]|[_]|[ ]"
-    
-  
-    
-    matchToIDTable <- function(ids,tbl, column, returnColumn="unique.cellid") {
-      sapply(ids, function(x) {
-        myx <- grep(paste0("((///)|^)",Hmisc::escapeRegex(x),"((///)|$)"), tbl[,column])
-        if(length(myx) > 1){
-          stop("Something went wrong in curating ids, we have multiple matches")
-        }
-        if(length(myx) == 0){return(NA_character_)}
-        return(tbl[myx, returnColumn])
-      })
+options(stringsAsFactors=FALSE)
+
+badchars <- "[\xb5]|[]|[ ,]|[;]|[:]|[-]|[+]|[*]|[%]|[$]|[#]|[{]|[}]|[[]|[]]|[|]|[\\^]|[/]|[\\]|[.]|[_]|[ ]"
+
+
+
+matchToIDTable <- function(ids,tbl, column, returnColumn="unique.cellid") {
+  sapply(ids, function(x) {
+    myx <- grep(paste0("((///)|^)",Hmisc::escapeRegex(x),"((///)|$)"), tbl[,column])
+    if(length(myx) > 1){
+      stop("Something went wrong in curating ids, we have multiple matches")
     }
-    
-    cell_all <- read.csv("/pfs/downAnnotations/cell_annotation_all.csv", na.strings=c("", " ", "NA"))
-    
-    ##read curations
-    curationCell <- cell_all[which(!is.na(cell_all[ , "GRAY.cellid"])),]
-    curationTissue <- cell_all[which(!is.na(cell_all[ , "GRAY.cellid"])),]
-    curationCell <- curationCell[ , c("unique.cellid", "GRAY.cellid","Cellosaurus.Accession.id")]
-    
-    ##read cellosaurus
-    
-    cellosaurus <- read.xlsx("/pfs/downAnnotations/cellosaurus_names.xlsx", sheet = "renaming2cellosaurus")
-    curationCell$unique.cellid[which(!is.na(curationCell$Cellosaurus.Accession.id))] <- cellosaurus$cellosaurus.name[match(na.omit(curationCell$Cellosaurus.Accession.id),na.omit(cellosaurus$cellosaurus_ac))]
-    
-    
-    #matchToIDTable(cellosaurus$lab_annotation, curationCell, "GRAY.cellid", returnColumn = "cellosaurus.name")
-    
-    curationTissue <- curationTissue[ , c("unique.tissueid", "GRAY.tissueid")]
-    
-    rownames(curationTissue) <- curationCell[ , "unique.cellid"]
-    rownames(curationCell) <- curationCell[ , "unique.cellid"]
-    
-    
-    #read pubchem
-    pubchem <- read.xlsx("/pfs/downAnnotations/drugsWithids_pub.xlsx", na.strings=c("", " ", "NA"))
-    pubchem$Selected.name[which(is.na(pubchem$Selected.name))] <- pubchem$unique.drugid[which(is.na(pubchem$Selected.name))]
-    
-    
-    curationDrug <- pubchem[which(!is.na(pubchem[ , "GRAY.drugid"])),]
-    curationDrug <- curationDrug[ , c("unique.drugid", "GRAY.drugid","Selected.name")]
-    curationDrug$unique.drugid <- curationDrug$Selected.name
-    
-    rownames(curationDrug) <- curationDrug[ , "unique.drugid"]
-    curationDrug$Selected.name <- NULL
+    if(length(myx) == 0){return(NA_character_)}
+    return(tbl[myx, returnColumn])
+    })
+}
+
+cell_all <- read.csv("/pfs/downAnnotations/cell_annotation_all.csv", na.strings=c("", " ", "NA"))
+
+##read curations
+curationCell <- cell_all[which(!is.na(cell_all[ , "GRAY.cellid"])),]
+curationTissue <- cell_all[which(!is.na(cell_all[ , "GRAY.cellid"])),]
+curationCell <- curationCell[ , c("unique.cellid", "GRAY.cellid","Cellosaurus.Accession.id")]
+
+## Not needed anymore, all cell lines names should be cellosaurus names when available. 
+
+# ##read cellosaurus
+
+# cellosaurus <- read.xlsx("/pfs/downAnnotations/cellosaurus_names.xlsx", sheet = "renaming2cellosaurus")
+# curationCell$unique.cellid[which(!is.na(curationCell$Cellosaurus.Accession.id))] <- cellosaurus$cellosaurus.name[match(na.omit(curationCell$Cellosaurus.Accession.id),na.omit(cellosaurus$cellosaurus_ac))]
+
+
+#matchToIDTable(cellosaurus$lab_annotation, curationCell, "GRAY.cellid", returnColumn = "cellosaurus.name")
+
+curationTissue <- curationTissue[ , c("unique.tissueid", "GRAY.tissueid")]
+
+rownames(curationTissue) <- curationCell[ , "unique.cellid"]
+rownames(curationCell) <- curationCell[ , "unique.cellid"]
+
+
+#read pubchem
+pubchem <- read.xlsx("/pfs/downAnnotations/drugsWithids_pub.xlsx", na.strings=c("", " ", "NA"))
+pubchem$Selected.name[which(is.na(pubchem$Selected.name))] <- pubchem$unique.drugid[which(is.na(pubchem$Selected.name))]
+
+
+curationDrug <- pubchem[which(!is.na(pubchem[ , "GRAY.drugid"])),]
+curationDrug <- curationDrug[ , c("unique.drugid", "GRAY.drugid","Selected.name")]
+curationDrug$unique.drugid <- curationDrug$Selected.name
+
+rownames(curationDrug) <- curationDrug[ , "unique.drugid"]
+curationDrug$Selected.name <- NULL
 
 
 ##sensitivity
-    
-    getGRAYrawData <-
-      function(result.type=c("array", "list")){
-        
-        gray.raw.drug.sensitivity <- read.csv(file = "/pfs/downloadGRAY2013SensRaw/gb-2013-14-10-r110-s9.txt" ,header = TRUE, sep = "\t",stringsAsFactors = FALSE)
-        gray.raw.drug.sensitivity.list <- do.call(c, apply(gray.raw.drug.sensitivity, 1, list))
-        
-        concentrations.no <- length(grep("^c[1-9]", colnames(gray.raw.drug.sensitivity)))
-        
-        if(result.type == "array"){
+
+getGRAYrawData <-
+function(result.type=c("array", "list")){
+
+  gray.raw.drug.sensitivity <- read.csv(file = "/pfs/downloadGRAY2013SensRaw/gb-2013-14-10-r110-s9.txt" ,header = TRUE, sep = "\t",stringsAsFactors = FALSE)
+  gray.raw.drug.sensitivity.list <- do.call(c, apply(gray.raw.drug.sensitivity, 1, list))
+
+  concentrations.no <- length(grep("^c[1-9]", colnames(gray.raw.drug.sensitivity)))
+
+  if(result.type == "array"){
           ## create the gray.drug.response object including information viablilities and concentrations for each cell/drug pair
           obj <- array(NA, dim=c(length(unique(gray.raw.drug.sensitivity[ , "cellline"])), length(unique(gray.raw.drug.sensitivity[ , "compound"])), 2, concentrations.no), dimnames=list(unique(gray.raw.drug.sensitivity[ , "cellline"]), unique(gray.raw.drug.sensitivity[ , "compound"]), c("concentration", "viability"), 1:concentrations.no))
         }
         fnexperiment <-
-          function(values){
-            cellline <- values["cellline"]
-            drug <- values["compound"]
+        function(values){
+          cellline <- values["cellline"]
+          drug <- values["compound"]
             doses <- as.numeric(values[grep("^c[1-9]", names(values))]) * 10 ^ 6 # micro molar
             
             if(concentrations.no > length(doses)) {doses <- c(doses, rep(NA, concentrations.no - length(doses)))}
@@ -91,25 +93,25 @@ library(openxlsx)
             if(result.type == "array"){
               obj[cellline,drug, "concentration", 1:length(doses)] <<- doses
               obj[cellline,drug, "viability", 1:length(responses)] <<- responses
-            }else{
+              }else{
               return(list(cell=cellline, drug=drug, doses=doses, responses=responses))#paste(doses, collapse = ","), responses=paste(responses, collapse = ",")))
             }
           }
-        
-        gray.raw.drug.sensitivity.res <- mapply(fnexperiment, values=gray.raw.drug.sensitivity.list)
-        if(result.type == "array"){
-          return(list("data"=obj, "concentrations.no"=concentrations.no))
-        }else{
-          return(list("data"=gray.raw.drug.sensitivity.res, "concentrations.no"=concentrations.no))
-        }
-      }
-    
-    raw.sensitivity <- getGRAYrawData(result.type="list")
-    con_tested <- raw.sensitivity$concentrations.no
-    raw.sensitivity <- t(raw.sensitivity$data)
-    raw.sensitivity <- t(apply(raw.sensitivity,1, function(x){unlist(x)}))
-    rownames(raw.sensitivity)  <- sprintf("drugid_%s_%s",as.character(raw.sensitivity[ ,2]),as.character(raw.sensitivity[ ,1]))
-    
+
+          gray.raw.drug.sensitivity.res <- mapply(fnexperiment, values=gray.raw.drug.sensitivity.list)
+          if(result.type == "array"){
+            return(list("data"=obj, "concentrations.no"=concentrations.no))
+            }else{
+              return(list("data"=gray.raw.drug.sensitivity.res, "concentrations.no"=concentrations.no))
+            }
+          }
+
+          raw.sensitivity <- getGRAYrawData(result.type="list")
+          con_tested <- raw.sensitivity$concentrations.no
+          raw.sensitivity <- t(raw.sensitivity$data)
+          raw.sensitivity <- t(apply(raw.sensitivity,1, function(x){unlist(x)}))
+          rownames(raw.sensitivity)  <- sprintf("drugid_%s_%s",as.character(raw.sensitivity[ ,2]),as.character(raw.sensitivity[ ,1]))
+
     ## handle replicates
     tt <- rownames(raw.sensitivity)
     for(i in 1:length(tt)) {
@@ -133,20 +135,20 @@ library(openxlsx)
     
     raw.sensitivity <- raw.sensitivity[ ,-c(1,2)]
     raw.sensitivity <- array(c(as.matrix(raw.sensitivity[ ,1:con_tested]), as.matrix(raw.sensitivity[ ,(con_tested+1):(2*con_tested)])), c(nrow(raw.sensitivity), con_tested, 2),
-                             dimnames=list(rownames(raw.sensitivity), colnames(raw.sensitivity[ ,1:con_tested]), c("Dose", "Viability")))
+     dimnames=list(rownames(raw.sensitivity), colnames(raw.sensitivity[ ,1:con_tested]), c("Dose", "Viability")))
     
 
 
-save(raw.sensitivity, sensitivity.info, tt, con_tested, file="/pfs/out/drug_norm_post.RData")
+    save(raw.sensitivity, sensitivity.info, tt, con_tested, file="/pfs/out/drug_norm_post.RData")
 
 
-raw.sensitivity.x <- parallel::splitIndices(nrow(raw.sensitivity), floor(nrow(raw.sensitivity)/1000))
+    raw.sensitivity.x <- parallel::splitIndices(nrow(raw.sensitivity), floor(nrow(raw.sensitivity)/1000))
 
-dir.create("/pfs/out/slices/")
+    dir.create("/pfs/out/slices/")
 
-for(i in seq_along(raw.sensitivity.x)){
+    for(i in seq_along(raw.sensitivity.x)){
 
-  slce <- raw.sensitivity[raw.sensitivity.x[[i]],,]
-  saveRDS(slce, file=paste0("/pfs/out/slices/gray2013_raw_sens_", i, ".rds"))
+      slce <- raw.sensitivity[raw.sensitivity.x[[i]],,]
+      saveRDS(slce, file=paste0("/pfs/out/slices/gray2013_raw_sens_", i, ".rds"))
 
-}
+    }
