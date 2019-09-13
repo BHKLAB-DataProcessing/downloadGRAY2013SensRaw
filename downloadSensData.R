@@ -39,7 +39,6 @@ drug_all <- read.csv("/pfs/downAnnotations/drugs_with_ids.csv", na.strings=c("",
 
 curationDrug <- drug_all[which(!is.na(drug_all[ , "GRAY.drugid"])),]
 curationDrug <- curationDrug[ , c("unique.drugid", "GRAY.drugid")]
-curationDrug$unique.drugid <- curationDrug$Selected.name
 
 rownames(curationDrug) <- curationDrug[ , "unique.drugid"]
 
