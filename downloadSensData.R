@@ -21,20 +21,12 @@ matchToIDTable <- function(ids,tbl, column, returnColumn="unique.cellid") {
 
 cell_all <- read.csv("/pfs/downAnnotations/cell_annotation_all.csv", na.strings=c("", " ", "NA"))
 
-##read curations
+##read cell and tissue curations
+
 curationCell <- cell_all[which(!is.na(cell_all[ , "GRAY.cellid"])),]
 curationTissue <- cell_all[which(!is.na(cell_all[ , "GRAY.cellid"])),]
 curationCell <- curationCell[ , c("unique.cellid", "GRAY.cellid","Cellosaurus.Accession.id")]
 
-## Not needed anymore, all cell lines names should be cellosaurus names when available. 
-
-# ##read cellosaurus
-
-# cellosaurus <- read.xlsx("/pfs/downAnnotations/cellosaurus_names.xlsx", sheet = "renaming2cellosaurus")
-# curationCell$unique.cellid[which(!is.na(curationCell$Cellosaurus.Accession.id))] <- cellosaurus$cellosaurus.name[match(na.omit(curationCell$Cellosaurus.Accession.id),na.omit(cellosaurus$cellosaurus_ac))]
-
-
-#matchToIDTable(cellosaurus$lab_annotation, curationCell, "GRAY.cellid", returnColumn = "cellosaurus.name")
 
 curationTissue <- curationTissue[ , c("unique.tissueid", "GRAY.tissueid")]
 
@@ -42,20 +34,17 @@ rownames(curationTissue) <- curationCell[ , "unique.cellid"]
 rownames(curationCell) <- curationCell[ , "unique.cellid"]
 
 
-#read pubchem
-pubchem <- read.xlsx("/pfs/downAnnotations/drugsWithids_pub.xlsx", na.strings=c("", " ", "NA"))
-pubchem$Selected.name[which(is.na(pubchem$Selected.name))] <- pubchem$unique.drugid[which(is.na(pubchem$Selected.name))]
+#read drug curations
+drug_all <- read.csv("/pfs/downAnnotations/drugs_with_ids.csv", na.strings=c("", " ", "NA"))
 
-
-curationDrug <- pubchem[which(!is.na(pubchem[ , "GRAY.drugid"])),]
-curationDrug <- curationDrug[ , c("unique.drugid", "GRAY.drugid","Selected.name")]
+curationDrug <- drug_all[which(!is.na(drug_all[ , "GRAY.drugid"])),]
+curationDrug <- curationDrug[ , c("unique.drugid", "GRAY.drugid")]
 curationDrug$unique.drugid <- curationDrug$Selected.name
 
 rownames(curationDrug) <- curationDrug[ , "unique.drugid"]
-curationDrug$Selected.name <- NULL
 
 
-##sensitivity
+##create sensitivity slices
 
 getGRAYrawData <-
 function(result.type=c("array", "list")){
